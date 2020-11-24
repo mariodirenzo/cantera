@@ -738,7 +738,8 @@ for _attr in ['X', 'Y', 'concentrations', 'partial_molar_enthalpies',
               'standard_entropies_R', 'standard_int_energies_RT',
               'standard_gibbs_RT', 'standard_cp_R', 'creation_rates',
               'destruction_rates', 'net_production_rates', 'mix_diff_coeffs',
-              'mix_diff_coeffs_mass', 'mix_diff_coeffs_mole', 'thermal_diff_coeffs']:
+              'mix_diff_coeffs_mass', 'mix_diff_coeffs_mole', 'thermal_diff_coeffs',
+              'mobilities']:
     setattr(FlameBase, _attr, _array_property(_attr, 'n_species'))
 
 # Add properties with values for each reaction
@@ -949,25 +950,52 @@ class IonFlameBase(FlameBase):
     @property
     def phi(self):
         """
-        Array containing the electric potential at each point.
+        Array containing the electric potential [V] at each point.
         """
         return self.profile(self.flame, 'ePotential')
 
     @property
     def E(self):
         """
-        Array containing the electric field strength at each point.
+        Array containing the electric field strength [V/m] at each point.
         """
         z = self.grid
         phi = self.phi
-        np = self.flame.n_points
-        Efield = []
-        Efield.append((phi[0] - phi[1]) / (z[1] - z[0]))
+        n_points = self.flame.n_points
+        Efield = np.zeros(n_points)
+        Efield[0] = (phi[0] - phi[1]) / (z[1] - z[0])
         # calculate E field strength
-        for n in range(1,np-1):
-            Efield.append((phi[n-1] - phi[n+1]) / (z[n+1] - z[n-1]))
-        Efield.append((phi[np-2] - phi[np-1]) / (z[np-1] - z[np-2]))
+        for n in range(1,n_points-1):
+            Efield[n] = (phi[n-1] - phi[n+1]) / (z[n+1] - z[n-1])
+        Efield[n_points-1] = ((phi[n_points-2] - phi[n_points-1]) /
+                                (z[n_points-1] -   z[n_points-2]))
         return Efield
+
+    @property
+    def electric_charge_density(self):
+        """
+        Array containing the electric charge density [C/m^3] at each point.
+        """
+        rho_e = np.zeros(self.flame.n_points)
+        Wi = self.gas.molecular_weights
+        for isp, s in enumerate(self.gas.species()):
+            rho_e += s.charge * self.Y[isp,:] / Wi[isp]
+        rho_e *= (avogadro * self.gas.density * electron_charge)
+        return rho_e
+
+    @property
+    def ion_current_density(self):
+        """
+        Array containing the ion current density [A/m^2] at each point.
+        """
+        J = np.zeros(self.flame.n_points)
+        Wi = self.gas.molecular_weights
+        for isp, s in enumerate(self.gas.species()):
+            J += (s.charge * self.Y[isp,:] / Wi[isp] *
+                  self.mobilities[isp,:])
+        J *= (avogadro * electron_charge *
+              self.gas.density * self.E)
+        return J
 
     def solve(self, loglevel=1, refine_grid=True, auto=False, stage=1, enable_energy=True):
         self.flame.set_solving_stage(stage)
