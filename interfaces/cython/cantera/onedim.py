@@ -940,20 +940,36 @@ class FreeFlame(FlameBase):
 class IonFlameBase(FlameBase):
 
     @property
-    def electric_field_enabled(self):
+    def poisson_enabled(self):
         """ Get/Set whether or not to solve the Poisson's equation."""
-        return self.flame.electric_field_enabled
+        return self.flame.poisson_enabled
 
-    @electric_field_enabled.setter
-    def electric_field_enabled(self, enable):
-        self.flame.electric_field_enabled = enable
+    @poisson_enabled.setter
+    def poisson_enabled(self, enable):
+        self.flame.poisson_enabled = enable
+
+    @property
+    def phi(self):
+        """
+        Array containing the electric potential at each point.
+        """
+        return self.profile(self.flame, 'ePotential')
 
     @property
     def E(self):
         """
         Array containing the electric field strength at each point.
         """
-        return self.profile(self.flame, 'eField')
+        z = self.grid
+        phi = self.phi
+        np = self.flame.n_points
+        Efield = []
+        Efield.append((phi[0] - phi[1]) / (z[1] - z[0]))
+        # calculate E field strength
+        for n in range(1,np-1):
+            Efield.append((phi[n-1] - phi[n+1]) / (z[n+1] - z[n-1]))
+        Efield.append((phi[np-2] - phi[np-1]) / (z[np-1] - z[np-2]))
+        return Efield
 
     def solve(self, loglevel=1, refine_grid=True, auto=False, stage=1, enable_energy=True):
         self.flame.set_solving_stage(stage)

@@ -1258,5 +1258,5 @@ class TestIonBurnerFlame(utilities.CanteraTest):
         self.sim.solve(loglevel=0, stage=2, auto=True)
 
         # Regression test
-        self.assertNear(max(self.sim.E), 591.76, 1e-2)
-        self.assertNear(max(self.sim.X[self.gas.species_index('E')]), 8.024e-9, 1e-2)
+        self.assertNear(max(self.sim.E), 552.33, 1e-2)
+        self.assertNear(max(self.sim.E), 469.7287, 1e-3)
