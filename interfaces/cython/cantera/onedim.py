@@ -40,7 +40,7 @@ class FlameBase(Sim1D):
         * ``velocity``: normal velocity [m/s]
         * ``spread_rate``: tangential velocity gradient [1/s]
         * ``lambda``: radial pressure gradient [N/m^4]
-        * ``eField``: electric field strength
+        * ``DeltaPhi``: electric potential [V]
 
         :param domain:
             Index of a specific domain within the `Sim1D.domains`
@@ -52,7 +52,7 @@ class FlameBase(Sim1D):
         dom = self.domains[self.domain_index(domain)]
         if isinstance(dom, Inlet1D):
             return tuple([e for e in self._other
-                          if e not in {'grid', 'lambda', 'eField'}])
+                          if e not in {'grid', 'lambda', 'DeltaPhi'}])
         elif isinstance(dom, (IdealGasFlow, IonFlow)):
             return self._other
         else:
@@ -950,19 +950,19 @@ class IonFlameBase(FlameBase):
         self.flame.poisson_enabled = enable
 
     @property
-    def phi(self):
+    def electric_potential(self):
         """
         Array containing the electric potential [V] at each point.
         """
         return self.profile(self.flame, 'ePotential')
 
     @property
-    def E(self):
+    def electric_field(self):
         """
         Array containing the electric field strength [V/m] at each point.
         """
         z = self.grid
-        phi = self.phi
+        phi = self.electric_potential
         n_points = self.flame.n_points
         Efield = np.zeros(n_points)
         Efield[0] = (phi[0] - phi[1]) / (z[1] - z[0])
@@ -996,7 +996,7 @@ class IonFlameBase(FlameBase):
             J += (s.charge * self.Y[isp,:] / Wi[isp] *
                   self.mobilities[isp,:])
         J *= (avogadro * electron_charge *
-              self.gas.density * self.E)
+              self.gas.density * self.electric_field)
         return J
 
     def solve(self, loglevel=1, refine_grid=True, auto=False, stage=1, enable_energy=True):
