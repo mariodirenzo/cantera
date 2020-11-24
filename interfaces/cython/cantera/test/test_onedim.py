@@ -1263,3 +1263,4 @@ class TestIonBurnerFlame(utilities.CanteraTest):
 
         # Regression test
         self.assertNear(max(self.sim.E), 552.33, 1e-2)
+        self.assertNear(max(self.sim.E), 469.7287, 1e-3)
