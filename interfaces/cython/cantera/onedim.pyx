@@ -681,8 +681,8 @@ cdef class IonFlow(_FlowBase):
     def set_solving_stage(self, stage):
         (<CxxIonFlow*>self.flow).setSolvingStage(stage)
 
-    def set_electricPotential(self, v_inlet, v_outlet):
-        (<CxxIonFlow*>self.flow).setElectricPotential(v_inlet, v_outlet)
+    def set_deltaElectricPotential(self, dv):
+        (<CxxIonFlow*>self.flow).setDeltaElectricPotential(dv)
 
     property poisson_enabled:
         """ Determines whether or not to solve the energy equation."""

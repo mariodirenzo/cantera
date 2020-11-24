@@ -789,7 +789,7 @@ cdef extern from "cantera/oneD/IonFlow.h":
     cdef cppclass CxxIonFlow "Cantera::IonFlow":
         CxxIonFlow(CxxIdealGasPhase*, int, int)
         void setSolvingStage(int)
-        void setElectricPotential(const double, const double)
+        void setDeltaElectricPotential(const double)
         void solvePoissonEqn()
         void fixElectricPotential()
         cbool doPoisson(size_t)

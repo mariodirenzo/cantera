@@ -19,8 +19,7 @@ IonFlow::IonFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
     StFlow(ph, nsp, points),
     m_import_electron_transport(false),
     m_stage(1),
-    m_inletVoltage(0.0),
-    m_outletVoltage(0.0),
+    m_voltage(0.0),
     m_kElectron(npos)
 {
     // make a local copy of species charge
@@ -51,7 +50,9 @@ IonFlow::IonFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
     for (size_t k : m_kCharge) {
         setBounds(c_offset_Y + k, -1e-14, 1.0);
     }
-    setBounds(c_offset_Y + m_kElectron, -1e-18, 1.0);
+    if (m_kElectron != npos) {
+        setBounds(c_offset_Y + m_kElectron, -1e-18, 1.0);
+    }
 
     m_refiner->setActive(c_offset_P, false);
     m_mobility.resize(m_nsp*m_points);
@@ -170,11 +171,10 @@ void IonFlow::setSolvingStage(const size_t stage)
     }
 }
 
-void IonFlow::setElectricPotential(const double v1, const double v2)
+void IonFlow::setDeltaElectricPotential(const double dv)
 {
     // This method can be used when you want to add external voltage
-    m_inletVoltage = v1;
-    m_outletVoltage = v2;
+    m_voltage = dv;
 }
 
 void IonFlow::evalResidual(double* x, double* rsd, int* diag,
@@ -193,10 +193,10 @@ void IonFlow::evalResidual(double* x, double* rsd, int* diag,
             for (size_t k : m_kCharge) {
                 rsd[index(c_offset_Y + k, 0)] = Y(x,k,0) - Y(x,k,1);
             }
-            rsd[index(c_offset_P, j)] = m_inletVoltage - phi(x,j);
+            rsd[index(c_offset_P, j)] = phi(x,j);
             diag[index(c_offset_P, j)] = 0;
         } else if (j == m_points - 1) {
-            rsd[index(c_offset_P, j)] = m_outletVoltage - phi(x,j);
+            rsd[index(c_offset_P, j)] = m_voltage - phi(x,j);
             diag[index(c_offset_P, j)] = 0;
         } else {
             //-----------------------------------------------
@@ -206,7 +206,7 @@ void IonFlow::evalResidual(double* x, double* rsd, int* diag,
             //
             //    E = -dV/dz
             //-----------------------------------------------
-            rsd[index(c_offset_P, j)] = dEdz(x,j) - rho_e(x,j) / epsilon_0;
+            rsd[index(c_offset_P, j)] = dEdz(x,j);// - rho_e(x,j) / epsilon_0;
             diag[index(c_offset_P, j)] = 0;
         }
     }

@@ -34,8 +34,8 @@ public:
     IonFlow(IdealGasPhase* ph = 0, size_t nsp = 1, size_t points = 1);
     //! set the solving stage
     virtual void setSolvingStage(const size_t phase);
-    //! set electric voltage at inlet and outlet
-    virtual void setElectricPotential(const double v1, const double v2);
+    //! set electric potential difference between inlet and outlet
+    virtual void setDeltaElectricPotential(const double dv);
 
     virtual void resize(size_t components, size_t points);
 
@@ -102,8 +102,7 @@ protected:
     size_t m_stage;
 
     //! The voltage
-    double m_inletVoltage;
-    double m_outletVoltage;
+    double m_voltage;
 
     //! index of electron
     size_t m_kElectron;
