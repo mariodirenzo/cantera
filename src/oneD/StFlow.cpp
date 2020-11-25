@@ -714,6 +714,15 @@ void StFlow::restore(const XML_Node& dom, doublereal* soln, int loglevel)
             for (size_t j = 0; j < np; j++) {
                 soln[index(c_offset_L,j)] = x[j];
             }
+        } else if (nm == "DeltaPhi") {
+            debuglog("electric potential   ", loglevel >= 2);
+            if (x.size() != np) {
+                throw CanteraError("StFlow::restore",
+                                   "electric potential artay size error");
+            }
+            for (size_t j = 0; j < np; j++) {
+                soln[index(c_offset_P,j)] = x[j];
+            }
         } else if (m_thermo->speciesIndex(nm) != npos) {
             debuglog(nm+"   ", loglevel >= 2);
             if (x.size() == np) {
@@ -819,6 +828,9 @@ XML_Node& StFlow::save(XML_Node& o, const doublereal* const sol)
 
     soln.getRow(c_offset_L, x.data());
     addFloatArray(gv,"L",x.size(),x.data(),"N/m^4");
+
+    soln.getRow(c_offset_P, x.data());
+    addFloatArray(gv,"DeltaPhi",x.size(),x.data(),"V","electric potential");
 
     for (size_t k = 0; k < m_nsp; k++) {
         soln.getRow(c_offset_Y+k, x.data());
