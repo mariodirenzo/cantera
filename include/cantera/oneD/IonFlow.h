@@ -34,8 +34,6 @@ public:
     IonFlow(IdealGasPhase* ph = 0, size_t nsp = 1, size_t points = 1);
     //! set the solving stage
     virtual void setSolvingStage(const size_t phase);
-    //! set electric potential difference between inlet and outlet
-    virtual void setDeltaElectricPotential(const double dv);
 
     virtual void resize(size_t components, size_t points);
 
@@ -72,9 +70,7 @@ protected:
                               double rdt, size_t jmin, size_t jmax);
     virtual void updateTransport(double* x, size_t j0, size_t j1);
     virtual void updateDiffFluxes(const double* x, size_t j0, size_t j1);
-    //! Solving phase one: the fluxes of charged species are turned off
-    virtual void frozenIonMethod(const double* x, size_t j0, size_t j1);
-    //! Solving phase three: the Poisson's equation is added coupled by the electrical drift
+    //! Solving the Poisson's equation is added coupled by the electrical drift
     virtual void poissonEqnMethod(const double* x, size_t j0, size_t j1);
     //! flag for solving poisson's equation or not
     std::vector<bool> m_do_poisson;

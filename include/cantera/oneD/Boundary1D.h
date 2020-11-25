@@ -80,10 +80,45 @@ public:
         return m_mdot;
     }
 
+    /// Set the electric potential [V].
+    virtual void setElectricPotential(double phi) {
+        m_phi = phi;
+    }
+
+    /// The electric potential [V].
+    virtual double electricPotential() {
+        return m_phi;
+    }
+
+    /// Define this boundary as an anode and set the electric potential [V].
+    virtual void setIsAnode(bool isAnode) {
+        m_isAnode = isAnode;
+        m_isCathode = not isAnode;
+    }
+
+    /// Define this boundary as a cathode and set the electric potential [V].
+    virtual void setIsCathode(bool isCathode) {
+        m_isAnode = not isCathode;
+        m_isCathode = isCathode;
+    }
+
+    virtual bool isAnode() const {
+        return m_isAnode;
+    }
+
+    virtual bool isCathode() const {
+        return m_isCathode;
+    }
+
     virtual void setupGrid(size_t n, const double* z) {}
 
 protected:
     void _init(size_t n);
+
+    void _setAnode(double* xb, double* rb,
+                   StFlow* m_flow, int sign);
+    void _setCathode(double* xb, double* rb,
+                     StFlow* m_flow, int sign);
 
     StFlow* m_flow_left, *m_flow_right;
     size_t m_ilr, m_left_nv, m_right_nv;
@@ -94,6 +129,8 @@ protected:
     size_t m_start_left, m_start_right;
     ThermoPhase* m_phase_left, *m_phase_right;
     double m_temp, m_mdot;
+    double m_phi;
+    bool m_isAnode, m_isCathode;
 };
 
 

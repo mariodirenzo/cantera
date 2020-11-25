@@ -85,55 +85,24 @@ void IonFlow::updateTransport(double* x, size_t j0, size_t j1)
 void IonFlow::updateDiffFluxes(const double* x, size_t j0, size_t j1)
 {
     if (m_stage == 1) {
-        frozenIonMethod(x,j0,j1);
+        StFlow::updateDiffFluxes(x, j0, j1);
     }
     if (m_stage == 2) {
         poissonEqnMethod(x,j0,j1);
     }
 }
 
-void IonFlow::frozenIonMethod(const double* x, size_t j0, size_t j1)
-{
-    for (size_t j = j0; j < j1; j++) {
-        double wtm = m_wtm[j];
-        double rho = density(j);
-        double dz = z(j+1) - z(j);
-        double sum = 0.0;
-        for (size_t k : m_kNeutral) {
-            m_flux(k,j) = m_wt[k]*(rho*m_diff[k+m_nsp*j]/wtm);
-            m_flux(k,j) *= (X(x,k,j) - X(x,k,j+1))/dz;
-            sum -= m_flux(k,j);
-        }
-
-        // correction flux to insure that \sum_k Y_k V_k = 0.
-        for (size_t k : m_kNeutral) {
-            m_flux(k,j) += sum*Y(x,k,j);
-        }
-
-        // flux for ions
-        // Set flux to zero to prevent some fast charged species (e.g. electron)
-        // to run away
-        for (size_t k : m_kCharge) {
-            m_flux(k,j) = 0;
-        }
-    }
-}
-
 void IonFlow::poissonEqnMethod(const double* x, size_t j0, size_t j1)
 {
+    // Add diffusion fluxes
+    StFlow::updateDiffFluxes(x, j0, j1);
+
     for (size_t j = j0; j < j1; j++) {
         double wtm = m_wtm[j];
         double rho = density(j);
         double dz = z(j+1) - z(j);
 
-        // mixture-average diffusion
         double sum = 0.0;
-        for (size_t k = 0; k < m_nsp; k++) {
-            m_flux(k,j) = m_wt[k]*(rho*m_diff[k+m_nsp*j]/wtm);
-            m_flux(k,j) *= (X(x,k,j) - X(x,k,j+1))/dz;
-            sum -= m_flux(k,j);
-        }
-
         // ambipolar diffusion
         const double E_ambi = E(x,j);
         for (size_t k : m_kCharge) {
@@ -143,20 +112,11 @@ void IonFlow::poissonEqnMethod(const double* x, size_t j0, size_t j1)
                                           Y(x,k,j+1);
             double drift = rho * Yav * Vdrift;
             m_flux(k,j) += drift;
+            sum -= drift;
         }
-
-        // correction flux
-        double sum_flux = 0.0;
+        // correction flux to insure that \sum_k Y_k V_k = 0.
         for (size_t k = 0; k < m_nsp; k++) {
-            sum_flux -= m_flux(k,j); // total net flux
-        }
-        double sum_ion = 0.0;
-        for (size_t k : m_kCharge) {
-            sum_ion += Y(x,k,j);
-        }
-        // The portion of correction for ions is taken off
-        for (size_t k : m_kNeutral) {
-            m_flux(k,j) += Y(x,k,j) / (1-sum_ion) * sum_flux;
+            m_flux(k,j) += sum*Y(x,k,j);
         }
     }
 }
@@ -173,53 +133,18 @@ void IonFlow::setSolvingStage(const size_t stage)
     }
 }
 
-void IonFlow::setDeltaElectricPotential(const double dv)
-{
-    // This method can be used when you want to add external voltage
-    m_voltage = dv;
-}
-
 void IonFlow::evalResidual(double* x, double* rsd, int* diag,
                            double rdt, size_t jmin, size_t jmax)
 {
     StFlow::evalResidual(x, rsd, diag, rdt, jmin, jmax);
-    if (m_stage != 2) {
-        return;
-    }
-
     for (size_t j = jmin; j <= jmax; j++) {
         if (j == 0) {
-            // enforcing the flux for charged species is difficult
-            // since charged species are also affected by electric
-            // force, so:
-            // - Neumann boundary condition is used for species
-            //   attracted by the boundary
-            // - Dirichlet equal to zero is used for species repelled
-            //   by the boundary
-            const double Edz = phi(x,0) - phi(x,1);
-            for (size_t k : m_kCharge) {
-                if (Edz * m_speciesCharge[k] > 0) {
-                    // here we are neglecting ion emisions from the electrode
-                    rsd[index(c_offset_Y + k, 0)] = Y(x,k,0);
-                } else {
-                    // here we are allowing all the ions to flow out of the domain
-                    rsd[index(c_offset_Y + k, 0)] = Y(x,k,0) - Y(x,k,1);
-                }
-            }
+            // Boundary conditions will take care of this point later
             rsd[index(c_offset_P, j)] = phi(x,j);
             diag[index(c_offset_P, j)] = 0;
         } else if (j == m_points - 1) {
-            const double Edz = phi(x,j-1) - phi(x,j);
-            for (size_t k : m_kCharge) {
-                if (Edz * m_speciesCharge[k] < 0) {
-                    // here we are neglecting ion emisions from the electrode
-                    rsd[index(c_offset_Y + k, j)] = Y(x,k,j);
-                } else {
-                    // here we are allowing all the ions to flow out of the domain
-                    rsd[index(c_offset_Y + k, j)] = Y(x,k,j) - Y(x,k,j-1);
-                }
-            }
-            rsd[index(c_offset_P, j)] = m_voltage - phi(x,j);
+            // Boundary conditions will take care of this point later
+            rsd[index(c_offset_P, j)] = phi(x,j);
             diag[index(c_offset_P, j)] = 0;
         } else {
             //-----------------------------------------------
