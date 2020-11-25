@@ -735,6 +735,12 @@ cdef extern from "cantera/oneD/Boundary1D.h":
         void setMoleFractions(double*) except +translate_exception
         void setMoleFractions(string) except +translate_exception
         double massFraction(size_t)
+        double electricPotential()
+        void setElectricPotential(double)
+        cbool isAnode()
+        cbool isCathode()
+        void setIsAnode(cbool)
+        void setIsCathode(cbool)
 
     cdef cppclass CxxInlet1D "Cantera::Inlet1D":
         CxxInlet1D()

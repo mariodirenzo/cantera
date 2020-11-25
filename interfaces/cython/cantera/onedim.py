@@ -942,7 +942,7 @@ class IonFlameBase(FlameBase):
 
     @property
     def poisson_enabled(self):
-        """ Get/Set whether or not to solve the Poisson's equation."""
+        """ get/set whether or not to solve the poisson's equation."""
         return self.flame.poisson_enabled
 
     @poisson_enabled.setter
@@ -980,24 +980,31 @@ class IonFlameBase(FlameBase):
         """
         rho_e = np.zeros(self.flame.n_points)
         Wi = self.gas.molecular_weights
-        for isp, s in enumerate(self.gas.species()):
-            rho_e += s.charge * self.Y[isp,:] / Wi[isp]
+        Si = self.gas.charges
+        for n in range(self.gas.n_species):
+            rho_e += Si[n] * self.Y[n,:] / Wi[n]
         rho_e *= (avogadro * self.gas.density * electron_charge)
         return rho_e
 
     @property
+    def total_ion_production(self):
+        """
+        Array containing the total ion producion density [A/m^3] produced by the flame.
+        """
+        w_e = np.zeros(self.flame.n_points)
+        Si = self.gas.charges
+        for n in range(self.gas.n_species):
+            if (Si[n] > 0):
+                w_e += (Si[n] * self.net_production_rates[n,:])
+        w_e *= (avogadro * electron_charge)
+        return w_e
+
+    @property
     def ion_current_density(self):
         """
-        Array containing the ion current density [A/m^2] at each point.
+        The total ion current density [A/m^2] produced by the flame.
         """
-        J = np.zeros(self.flame.n_points)
-        Wi = self.gas.molecular_weights
-        for isp, s in enumerate(self.gas.species()):
-            J += (s.charge * self.Y[isp,:] / Wi[isp] *
-                  self.mobilities[isp,:])
-        J *= (avogadro * electron_charge *
-              self.gas.density * self.electric_field)
-        return J
+        return np.trapz(self.total_ion_production, self.grid)
 
     def solve(self, loglevel=1, refine_grid=True, auto=False, stage=1, enable_energy=True):
         self.flame.set_solving_stage(stage)
@@ -1011,7 +1018,7 @@ class IonFlameBase(FlameBase):
 class IonFreeFlame(IonFlameBase, FreeFlame):
     """A freely-propagating flame with ionized gas."""
     __slots__ = ('inlet', 'flame', 'outlet')
-    _other = ('grid', 'velocity', 'eField')
+    _other = ('grid', 'velocity', 'ePotential')
 
     def __init__(self, gas, grid=None, width=None):
         if not hasattr(self, 'flame'):
@@ -1155,7 +1162,7 @@ class BurnerFlame(FlameBase):
 class IonBurnerFlame(IonFlameBase, BurnerFlame):
     """A burner-stabilized flat flame with ionized gas."""
     __slots__ = ('burner', 'flame', 'outlet')
-    _other = ('grid', 'velocity', 'eField')
+    _other = ('grid', 'velocity', 'ePotential')
 
     def __init__(self, gas, grid=None, width=None):
         if not hasattr(self, 'flame'):
@@ -1164,6 +1171,18 @@ class IonBurnerFlame(IonFlameBase, BurnerFlame):
             self.flame.set_axisymmetric_flow()
 
         super().__init__(gas, grid, width)
+
+    @property
+    def delta_electric_potential(self):
+        """ get/set difference of potential across the domain."""
+        return (self.outlet.electricPotential - self.burner.electricPotential)
+
+    @delta_electric_potential.setter
+    def delta_electric_potential(self, phi):
+        self.burner.electricPotential = 0.0
+        self.outlet.electricPotential = phi
+        self.burner.isCathode = (phi > 0)
+        self.outlet.isAnode = (phi > 0)
 
 
 class CounterflowDiffusionFlame(FlameBase):

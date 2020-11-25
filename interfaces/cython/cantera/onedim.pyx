@@ -332,6 +332,36 @@ cdef class Boundary1D(Domain1D):
             self.gas.TPY = self.gas.T, self.gas.P, Y
             self.X = self.gas.X
 
+    property electricPotential:
+        """
+        Electric potential at this boundary
+        """
+        def __get__(self):
+            return self.boundary.electricPotential()
+
+        def __set__(self, phi):
+            self.boundary.setElectricPotential(phi)
+
+    property isAnode:
+        """
+        Flag that determines if this boundary is an anode for the system
+        """
+        def __get__(self):
+            return self.boundary.isAnode()
+
+        def __set__(self, isAnode):
+            self.boundary.setIsAnode(isAnode)
+
+    property isCathode:
+        """
+        Flag that determines if this boundary is a cathode for the system
+        """
+        def __get__(self):
+            return self.boundary.isCathode()
+
+        def __set__(self, isCathode):
+            self.boundary.setIsCathode(isCathode)
+
 
 cdef class Inlet1D(Boundary1D):
     """
@@ -681,9 +711,6 @@ cdef class IonFlow(_FlowBase):
     def set_solving_stage(self, stage):
         (<CxxIonFlow*>self.flow).setSolvingStage(stage)
 
-    def set_deltaElectricPotential(self, dv):
-        (<CxxIonFlow*>self.flow).setDeltaElectricPotential(dv)
-
     property poisson_enabled:
         """ Determines whether or not to solve the energy equation."""
         def __get__(self):
@@ -699,9 +726,9 @@ cdef class IonFlow(_FlowBase):
         chargetol = {}
         for S in self.gas.species():
             if S.composition == {'E': 1.0}:
-                chargetol[S.name] = (1e-5, 1e-20)
+                chargetol[S.name] = (1e-8, 1e-20)
             elif S.charge != 0:
-                chargetol[S.name] = (1e-5, 1e-16)
+                chargetol[S.name] = (1e-8, 1e-20)
         self.set_steady_tolerances(**chargetol)
         self.set_transient_tolerances(**chargetol)
         self.have_user_tolerances = False

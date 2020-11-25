@@ -21,7 +21,8 @@ Boundary1D::Boundary1D() : Domain1D(1, 1, 0.0),
     m_left_nsp(0), m_right_nsp(0),
     m_sp_left(0), m_sp_right(0),
     m_start_left(0), m_start_right(0),
-    m_phase_left(0), m_phase_right(0), m_temp(0.0), m_mdot(0.0)
+    m_phase_left(0), m_phase_right(0), m_temp(0.0), m_mdot(0.0),
+    m_phi(0.0), m_isAnode(false), m_isCathode(false)
 {
     m_type = cConnectorType;
 }
@@ -69,6 +70,46 @@ void Boundary1D::_init(size_t n)
             throw CanteraError("Boundary1D::_init",
                 "Boundary domains can only be connected on the right to flow "
                 "domains, not type {} domains.", r.domainType());
+        }
+    }
+}
+
+void Boundary1D::_setAnode(double* xb, double* rb,
+                           StFlow* m_flow, int sign)
+{
+    // if it is an anode of an energy consuming system, set:
+    //   - the electric potential,
+    //   - the mass fraction of positive species to zero
+    //   - the mass fraction gradient of negative species to zero
+    rb[c_offset_P] -= m_phi;
+    size_t off = m_flow->nComponents()*sign;
+    size_t nsp = m_flow->phase().nSpecies();
+    ThermoPhase* thermo = &m_flow->phase();
+    for (size_t k = 0; k < nsp; k++) {
+        if (thermo->charge(k) > 0) {
+            rb[c_offset_Y+k] = xb[c_offset_Y+k];
+        } else if (thermo->charge(k) < 0) {
+            rb[c_offset_Y+k] = xb[c_offset_Y+k] - xb[c_offset_Y+k+off];
+        }
+    }
+}
+
+void Boundary1D::_setCathode(double* xb, double* rb,
+                             StFlow* m_flow, int sign)
+{
+    // if it is a cathode of an energy consuming system, set:
+    //   - the electric potential,
+    //   - the mass fraction of negative species to zero
+    //   - the mass fraction gradient of positive species to zero
+    rb[c_offset_P] -= m_phi;
+    size_t off = m_flow->nComponents()*sign;
+    size_t nsp = m_flow->phase().nSpecies();
+    ThermoPhase* thermo = &m_flow->phase();
+    for (size_t k = 0; k < nsp; k++) {
+        if (thermo->charge(k) < 0) {
+            rb[c_offset_Y+k] = xb[c_offset_Y+k];
+        } else if (thermo->charge(k) > 0) {
+            rb[c_offset_Y+k] = xb[c_offset_Y+k] - xb[c_offset_Y+k+off];
         }
     }
 }
@@ -190,9 +231,19 @@ void Inlet1D::eval(size_t jg, double* xg, double* rg,
             }
         }
 
+        // set electric boundary condition if this is an anode
+        if (m_isAnode) {
+           _setAnode(xb, rb, m_flow_right, 1);
+        }
+        // set electric boundary condition if this is an cathode
+        if (m_isCathode) {
+           _setCathode(xb, rb, m_flow_right, 1);
+        }
+
     } else {
         // right inlet
         // Array elements corresponding to the flast point in the flow domain
+        double* xb = xg + loc() - m_flow->nComponents();
         double* rb = rg + loc() - m_flow->nComponents();
         rb[c_offset_V] -= m_V0;
         if (m_flow->doEnergy(m_flow->nPoints() - 1)) {
@@ -203,6 +254,14 @@ void Inlet1D::eval(size_t jg, double* xg, double* rg,
             if (k != m_flow_left->rightExcessSpecies()) {
                 rb[c_offset_Y+k] += m_mdot * m_yin[k];
             }
+        }
+        // set electric boundary condition if this is an anode
+        if (m_isAnode) {
+           _setAnode(xb, rb, m_flow_left, -1);
+        }
+        // set electric boundary condition if this is an cathode
+        if (m_isCathode) {
+           _setCathode(xb, rb, m_flow_left, -1);
         }
     }
 }
@@ -369,6 +428,14 @@ void Outlet1D::eval(size_t jg, double* xg, double* rg, integer* diagg,
         for (size_t k = c_offset_Y; k < nc; k++) {
             rb[k] = xb[k] - xb[k + nc];
         }
+        // set electric boundary condition if this is an anode
+        if (m_isAnode) {
+           _setAnode(xb, rb, m_flow_right, 1);
+        }
+        // set electric boundary condition if this is an cathode
+        if (m_isCathode) {
+           _setCathode(xb, rb, m_flow_right, 1);
+        }
     }
 
     if (m_flow_left) {
@@ -391,6 +458,14 @@ void Outlet1D::eval(size_t jg, double* xg, double* rg, integer* diagg,
                 rb[k] = xb[k] - xb[k - nc]; // zero mass fraction gradient
                 db[k] = 0;
             }
+        }
+        // set electric boundary condition if this is an anode
+        if (m_isAnode) {
+           _setAnode(xb, rb, m_flow_left, -1);
+        }
+        // set electric boundary condition if this is an cathode
+        if (m_isCathode) {
+           _setCathode(xb, rb, m_flow_left, -1);
         }
     }
 }
