@@ -44,15 +44,15 @@ IonFlow::IonFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
     // no bound for electric potential
     setBounds(c_offset_P, -1.0e20, 1.0e20);
 
-    // Set tighter negative species limit on charged species to avoid
-    // instabilities. Tolerance on electrons is even tighter to account for the
-    // low "molecular" weight.
-    for (size_t k : m_kCharge) {
-        setBounds(c_offset_Y + k, -1e-14, 1.0);
-    }
-    if (m_kElectron != npos) {
-        setBounds(c_offset_Y + m_kElectron, -1e-18, 1.0);
-    }
+//    // Set tighter negative species limit on charged species to avoid
+//    // instabilities. Tolerance on electrons is even tighter to account for the
+//    // low "molecular" weight.
+//    for (size_t k : m_kCharge) {
+//        setBounds(c_offset_Y + k, -1e-14, 1.0);
+//    }
+//    if (m_kElectron != npos) {
+//        setBounds(c_offset_Y + m_kElectron, -1e-18, 1.0);
+//    }
 
     m_refiner->setActive(c_offset_P, false);
     m_mobility.resize(m_nsp*m_points);
@@ -85,11 +85,24 @@ void IonFlow::updateTransport(double* x, size_t j0, size_t j1)
 void IonFlow::updateDiffFluxes(const double* x, size_t j0, size_t j1)
 {
     if (m_stage == 1) {
-        StFlow::updateDiffFluxes(x, j0, j1);
+        frozenIonMethod(x,j0,j1);
     }
     if (m_stage == 2) {
         poissonEqnMethod(x,j0,j1);
     }
+}
+
+void IonFlow::frozenIonMethod(const double* x, size_t j0, size_t j1)
+{
+    StFlow::updateDiffFluxes(x, j0, j1);
+//    for (size_t j = j0; j < j1; j++) {
+//        // flux for ions
+//        // Set flux to zero to prevent some fast charged species (e.g. electron)
+//        // to run away
+//        for (size_t k : m_kCharge) {
+//            m_flux(k,j) = 0;
+//        }
+//    }
 }
 
 void IonFlow::poissonEqnMethod(const double* x, size_t j0, size_t j1)
@@ -98,13 +111,10 @@ void IonFlow::poissonEqnMethod(const double* x, size_t j0, size_t j1)
     StFlow::updateDiffFluxes(x, j0, j1);
 
     for (size_t j = j0; j < j1; j++) {
-        double wtm = m_wtm[j];
-        double rho = density(j);
-        double dz = z(j+1) - z(j);
-
-        double sum = 0.0;
         // ambipolar diffusion
         const double E_ambi = E(x,j);
+        const double rho = density(j);
+        double sum = 0.0;
         for (size_t k : m_kCharge) {
             const double Vdrift = m_speciesCharge[k] * m_mobility[k+m_nsp*j] * E_ambi;
             // Upwind the mass fraction reconstruction based on the sign of drift velocity
