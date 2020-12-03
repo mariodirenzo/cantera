@@ -1181,9 +1181,8 @@ class IonBurnerFlame(IonFlameBase, BurnerFlame):
     def delta_electric_potential(self, phi):
         self.burner.electricPotential = 0.0
         self.outlet.electricPotential = phi
-        if (phi != 0):
-            self.burner.isCathode = (phi > 0)
-            self.outlet.isAnode = (phi > 0)
+        self.burner.isCathode = (phi >= 0)
+        self.outlet.isAnode = (phi >= 0)
 
 
 class CounterflowDiffusionFlame(FlameBase):
