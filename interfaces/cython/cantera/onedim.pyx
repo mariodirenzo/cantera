@@ -723,15 +723,16 @@ cdef class IonFlow(_FlowBase):
 
     def set_default_tolerances(self):
         super().set_default_tolerances()
-#        chargetol = {}
-#        for S in self.gas.species():
-#            if S.composition == {'E': 1.0}:
-#                chargetol[S.name] = (1e-4, 1e-20)
-#            elif S.charge != 0:
-#                chargetol[S.name] = (1e-4, 1e-11)
-#        self.set_steady_tolerances(**chargetol)
-#        self.set_transient_tolerances(**chargetol)
-#        self.have_user_tolerances = False
+        chargetol = {}
+        for S in self.gas.species():
+            if S.charge != 0:
+                chargetol[S.name] = (1e-5, 1e-11)
+        self.set_transient_tolerances(**chargetol)
+        for S in self.gas.species():
+            if S.name == "E":
+                chargetol[S.name] = (1e-6, 1e-20)
+        self.set_steady_tolerances(**chargetol)
+        self.have_user_tolerances = False
 
 
 cdef class Sim1D:
