@@ -19,7 +19,6 @@ IonFlow::IonFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
     StFlow(ph, nsp, points),
     m_import_electron_transport(false),
     m_stage(1),
-    m_voltage(0.0),
     m_kElectron(npos)
 {
     // make a local copy of species charge
@@ -110,19 +109,17 @@ void IonFlow::poissonEqnMethod(const double* x, size_t j0, size_t j1)
     // Add diffusion fluxes
     StFlow::updateDiffFluxes(x, j0, j1);
 
+    // Add ambipolar diffusion
     for (size_t j = j0; j < j1; j++) {
-        // ambipolar diffusion
         const double E_ambi = E(x,j);
-        const double rho = density(j);
+        const double rho = 0.5*(density(j) + density(j+1));
         double sum = 0.0;
         for (size_t k : m_kCharge) {
             const double Vdrift = m_speciesCharge[k] * m_mobility[k+m_nsp*j] * E_ambi;
             // Upwind the mass fraction reconstruction based on the sign of drift velocity
-            double Yav = (Vdrift > 0.0) ? Y(x,k,j  ) :
-                                          Y(x,k,j+1);
-            double drift = rho * Yav * Vdrift;
-            m_flux(k,j) += drift;
-            sum -= drift;
+            double Flux = rho * Vdrift * ((Vdrift > 0.0) ? Y(x,k,j) : Y(x,k,j+1));
+            m_flux(k,j) += Flux;
+            sum -= Flux;
         }
         // correction flux to insure that \sum_k Y_k V_k = 0.
         for (size_t k = 0; k < m_nsp; k++) {
@@ -158,11 +155,26 @@ void IonFlow::evalResidual(double* x, double* rsd, int* diag,
             diag[index(c_offset_P, j)] = 0;
         } else {
             //-----------------------------------------------
+            //    Energy equation
+            //    Add Jule heating
+            //
+            //    Na*sum(q_k*J_k/W_k)*E
+            //-----------------------------------------------
+            if (m_do_energy[j]) {
+                double JuleHeating = 0.0;
+                for (size_t k : m_kCharge) {
+                    double flxk = 0.5*(m_flux(k,j-1) + m_flux(k,j));
+                    JuleHeating += m_speciesCharge[k] * flxk / m_wt[k];
+                }
+                JuleHeating *= ElectronCharge * Avogadro * 0.5*(E(x,j) + E(x,j-1));
+                rsd[index(c_offset_T, j)] += JuleHeating/(m_rho[j]*m_cp[j]);
+            }
+            //-----------------------------------------------
             //    Poisson's equation
             //
             //    dE/dz = e/eps_0 * sum(q_k*n_k)
             //
-            //    E = -dV/dz
+            //    E = -dPhi/dz
             //-----------------------------------------------
             rsd[index(c_offset_P, j)] = dEdz(x,j) - rho_e(x,j) / epsilon_0;
             diag[index(c_offset_P, j)] = 0;
