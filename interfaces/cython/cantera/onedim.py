@@ -981,7 +981,7 @@ class IonFlameBase(FlameBase):
         Si = self.gas.charges
         for n in range(self.gas.n_species):
             rho_e += Si[n] * self.Y[n,:] / Wi[n]
-        rho_e *= (avogadro * self.gas.density * electron_charge)
+        rho_e *= (avogadro * electron_charge * self.density)
         return rho_e
 
     @property
