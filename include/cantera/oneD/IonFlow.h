@@ -99,9 +99,6 @@ protected:
     //! solving stage
     size_t m_stage;
 
-    //! The voltage
-    double m_voltage;
-
     //! index of electron
     size_t m_kElectron;
 
