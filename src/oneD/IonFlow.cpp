@@ -53,7 +53,7 @@ IonFlow::IonFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
         setBounds(c_offset_Y + m_kElectron, -1e-14, 1.0);
     }
 
-    m_refiner->setActive(c_offset_P, false);
+    m_refiner->setActive(c_offset_P, true);
     m_mobility.resize(m_nsp*m_points);
     m_do_poisson.resize(m_points,false);
 }
@@ -117,7 +117,7 @@ void IonFlow::poissonEqnMethod(const double* x, size_t j0, size_t j1)
         for (size_t k : m_kCharge) {
             const double Vdrift = m_speciesCharge[k] * m_mobility[k+m_nsp*j] * E_ambi;
             // Upwind the mass fraction reconstruction based on the sign of drift velocity
-            double Flux = rho * Vdrift * ((Vdrift > 0.0) ? Y(x,k,j) : Y(x,k,j+1));
+            const double Flux = rho * Vdrift * ((Vdrift > 0.0) ? Y(x,k,j) : Y(x,k,j+1));
             m_flux(k,j) += Flux;
             sum -= Flux;
         }
@@ -253,15 +253,15 @@ void IonFlow::_finalize(const double* x)
 {
     StFlow::_finalize(x);
 
-    bool p = m_do_poisson[0];
-    for (size_t j = 0; j < m_points; j++) {
-        if (!p) {
-            m_fixedElecPoten[j] = phi(x, j);
-        }
-    }
-    if (p) {
-        solvePoissonEqn();
-    }
+    //bool p = m_do_poisson[0];
+    //for (size_t j = 0; j < m_points; j++) {
+    //    if (!p) {
+    //        m_fixedElecPoten[j] = phi(x, j);
+    //    }
+    //}
+    //if (p) {
+    //    solvePoissonEqn();
+    //}
 }
 
 }
