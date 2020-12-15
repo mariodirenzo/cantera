@@ -730,7 +730,7 @@ cdef class IonFlow(_FlowBase):
         self.set_transient_tolerances(**chargetol)
         for S in self.gas.species():
             if S.name == "E":
-                chargetol[S.name] = (1e-6, 1e-20)
+                chargetol[S.name] = (1e-5, 1e-20)
         self.set_steady_tolerances(**chargetol)
         self.have_user_tolerances = False
 

@@ -39,7 +39,7 @@ class FlameBase(Sim1D):
          * ``velocity``: normal velocity [m/s]
          * ``spread_rate``: tangential velocity gradient [1/s]
          * ``lambda``: radial pressure gradient [N/m^4]
-         * ``DeltaPhi``: electric potential [V]
+         * ``ePotential``: electric potential [V]
 
         :param domain: Index of a specific domain within the `Sim1D.domains`
             list. The default is to return other columns of the `Sim1D` object.
@@ -50,7 +50,7 @@ class FlameBase(Sim1D):
         dom = self.domains[self.domain_index(domain)]
         if isinstance(dom, Inlet1D):
             return tuple([e for e in self._other
-                          if e not in {'grid', 'lambda', 'DeltaPhi'}])
+                          if e not in {'grid', 'lambda', 'ePotential'}])
         elif isinstance(dom, (IdealGasFlow, IonFlow)):
             return self._other
         else:
@@ -1180,7 +1180,8 @@ class IonBurnerFlame(IonFlameBase, BurnerFlame):
         self.burner.electricPotential = 0.0
         self.outlet.electricPotential = phi
         self.burner.isCathode = (phi >= 0)
-        self.outlet.isAnode = (phi >= 0)
+        self.outlet.isAnode   = (phi >= 0)
+        self.set_profile('ePotential', [0, 1], [0, phi])
 
 
 class CounterflowDiffusionFlame(FlameBase):
