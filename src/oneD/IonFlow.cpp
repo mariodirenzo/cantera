@@ -47,10 +47,10 @@ IonFlow::IonFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
     // instabilities. Tolerance on electrons is even tighter to account for the
     // low "molecular" weight.
     for (size_t k : m_kCharge) {
-        setBounds(c_offset_Y + k, -1e-10, 1.0);
+        setBounds(c_offset_Y + k, -1e-8, 1.0);
     }
     if (m_kElectron != npos) {
-        setBounds(c_offset_Y + m_kElectron, -1e-14, 1.0);
+        setBounds(c_offset_Y + m_kElectron, -1e-10, 1.0);
     }
 
     m_refiner->setActive(c_offset_P, true);
