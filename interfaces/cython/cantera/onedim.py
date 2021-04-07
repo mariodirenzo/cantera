@@ -1004,7 +1004,7 @@ class IonFlameBase(FlameBase):
         """
         return np.trapz(self.total_ion_production, self.grid)
 
-    def solve(self, loglevel=1, refine_grid=True, auto=False, stage=1, enable_energy=True):
+    def solve(self, loglevel=1, refine_grid=True, auto=False, stage=2, enable_energy=True):
         self.flame.set_solving_stage(stage)
         if stage == 1:
             super().solve(loglevel, refine_grid, auto)
