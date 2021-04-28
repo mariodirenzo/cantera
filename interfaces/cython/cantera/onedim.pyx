@@ -726,15 +726,22 @@ cdef class IonFlow(_FlowBase):
         chargetol = {}
         for S in self.gas.species():
             if S.charge != 0:
-                chargetol[S.name] = (1e-5, 1e-9)
-        chargetol["ePotential"] = (1e-7, 1e-12)
-        self.set_transient_tolerances(**chargetol)
+                chargetol[S.name] = (1e-5, 1e-12)
         for S in self.gas.species():
             if S.name == "E":
-                chargetol[S.name] = (1e-5, 1e-20)
+                chargetol[S.name] = (1e-5, 1e-12)
+        chargetol["ePotential"] = (1e-4, 1e-11)
+        self.set_transient_tolerances(**chargetol)
+        self.have_user_tolerances = False
+        for S in self.gas.species():
+            if S.charge != 0:
+                chargetol[S.name] = (1e-5, 1e-12)
+        for S in self.gas.species():
+            if S.name == "E":
+                chargetol[S.name] = (1e-5, 1e-22)
+        chargetol["ePotential"] = (1e-4, 1e-11)
         self.set_steady_tolerances(**chargetol)
         self.have_user_tolerances = False
-
 
 cdef class Sim1D:
     """
