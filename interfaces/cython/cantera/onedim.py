@@ -727,7 +727,8 @@ for _attr in ['density', 'density_mass', 'density_mole', 'volume_mass',
               'entropy_mass', 'g', 'gibbs_mole', 'gibbs_mass', 'cv',
               'cv_mole', 'cv_mass', 'cp', 'cp_mole', 'cp_mass',
               'isothermal_compressibility', 'thermal_expansion_coeff',
-              'viscosity', 'thermal_conductivity', 'heat_release_rate']:
+              'viscosity', 'thermal_conductivity', 'heat_release_rate',
+              'mean_molecular_weight']:
     setattr(FlameBase, _attr, _array_property(_attr))
 FlameBase.volume = _array_property('v') # avoid confusion with velocity gradient 'V'
 FlameBase.int_energy = _array_property('u') # avoid collision with velocity 'u'
@@ -1004,7 +1005,39 @@ class IonFlameBase(FlameBase):
         """
         The total ion current density [A/m^2] produced by the flame.
         """
-        return np.trapz(self.total_ion_production, self.grid)
+        n_points = self.flame.n_points
+        J = np.zeros(n_points)
+
+        z  = self.grid
+        u  = self.velocity
+        Ki = self.mobilities
+        Si = self.gas.charges
+        E  = self.electric_field
+        Di = self.mix_diff_coeffs
+        Wm = self.mean_molecular_weight
+        Wi = self.gas.molecular_weights
+
+        def getXgrad(n):
+           d = np.zeros(n_points)
+           z = self.grid
+           # First grid point
+           d[0] = (self.X[n,0] - self.X[n,0])/(z[1] - z[0])
+           # Internal points
+           for i in range(1, n_points-1):
+              d[i] = (self.X[n,i] - self.X[n,i-1])/(z[i] - z[i-1])
+           # Last grid point
+           d[n_points-1] = (self.X[n,n_points-1] - self.X[n,n_points-2])/(z[n_points-1] - z[n_points-2])
+           return d
+
+        for n in range(self.gas.n_species):
+            if (Si[n] != 0):
+                YiVi = (               u[:]*self.Y[n,:]
+                       + Si[n]*Ki[n,:]*E[:]*self.Y[n,:]
+                       - Di[n,:]*getXgrad(n)*Wi[n]/Wm[:])
+                J += Si[n] / Wi[n] * YiVi
+        J *= (avogadro * electron_charge * self.density)
+
+        return J
 
     def solve(self, loglevel=1, refine_grid=True, auto=False, stage=2, enable_energy=True):
         self.flame.set_solving_stage(stage)
