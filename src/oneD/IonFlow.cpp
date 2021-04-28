@@ -176,10 +176,10 @@ void IonFlow::evalResidual(double* x, double* rsd, int* diag,
             //
             //    E = -dPhi/dz
             //-----------------------------------------------
-            if (m_do_poisson[j]) {
-               rsd[index(c_offset_P, j)] = epsilon_0*dEdz(x,j) - rho_e(x,j);
+            if (m_stage == 2) {
+               rsd[index(c_offset_P, j)] = dEdz(x,j) - rho_e(x,j)/epsilon_0;
             } else {
-               rsd[index(c_offset_P, j)] = epsilon_0*dEdz(x,j);
+               rsd[index(c_offset_P, j)] = dEdz(x,j);
             }
             diag[index(c_offset_P, j)] = 0;
         }
